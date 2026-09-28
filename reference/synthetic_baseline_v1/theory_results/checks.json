@@ -1,0 +1,5 @@
+{
+  "checks": "quadrature agreement, independent MC, rank baseline, monotonicity passed",
+  "not_proven_by_tests": "Mathematical validity in general or originality",
+  "assumptions": "Known zero mean; independent Gaussian innovations; deterministic multiplier pattern"
+}

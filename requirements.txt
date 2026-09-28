@@ -1,0 +1,3 @@
+# Versions in the executed synthetic reference environment.
+numpy==2.3.5
+scipy==1.17.0

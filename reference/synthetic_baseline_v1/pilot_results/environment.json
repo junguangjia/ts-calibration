@@ -1,0 +1,31 @@
+{
+  "purpose": "Exploratory synthetic mechanism pilot; no novelty/performance claim",
+  "seed": 20260928,
+  "reps": 200,
+  "N": 2600,
+  "evaluation_start": 1000,
+  "scale_jumps_zero_based": {
+    "1200": 3.0,
+    "1800": 1.0
+  },
+  "alpha": 0.05,
+  "ewma_decay": 0.94,
+  "location": "Known zero, fixed for every method",
+  "noise": "Independent standard Gaussian",
+  "score_storage": "Immutable vintage / forecast-origin scales",
+  "oracle_visibility": "True scales used only in explicitly named oracle methods and diagnostics",
+  "tests": [
+    "future-suffix invariance passed",
+    "scale equivariance passed",
+    "oracle radius identity passed"
+  ],
+  "limitations": [
+    "One controlled scale scenario, one EWMA setting",
+    "Not GARCH; not original homework execution",
+    "No ACI/SPCI/SAOCP/PID comparison",
+    "No new candidate method tested; no confirmatory test set"
+  ],
+  "python": "3.13.5",
+  "numpy": "2.3.5",
+  "scipy": "1.17.0"
+}
