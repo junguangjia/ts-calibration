@@ -15,6 +15,12 @@ the proposed mechanism, assumptions, and open scientific questions; it is not
 a verified result. `validation_notes.md` records the scope of the numerical
 checks.
 
+The [feasibility report](latex/ts-calibration-report.pdf) summarizes the
+finite-window mechanism and archived synthetic pilot. Its editable
+[LaTeX source](latex/ts-calibration-report.tex) is included. The report is
+development evidence, not a new-method or general-coverage claim. Compile the
+standalone source twice with `pdflatex` to resolve cross-references.
+
 ## Run
 Use Python 3.12.9 and [uv](https://docs.astral.sh/uv/) on `PATH`. From the
 repository root:
@@ -41,6 +47,7 @@ with `PYTHONPATH=src .venv/bin/python your_script.py`; pytest already includes
 ## Layout
 - `pilot.py`, `theory_checks.py`: exploratory simulation and numerical checks.
 - `src/tscal/`: canonical Python research protocol and future methods.
+- `latex/`: standalone feasibility report and compiled PDF.
 - `reference/r/`: optional independent classical statistical reference.
 - `reference/synthetic_baseline_v1/`: archived exploratory synthetic outputs
   with SHA-256 checksums.

@@ -12,3 +12,9 @@ reference/coursework/
 reference/manifest.json
 docs/environment.local.json
 *.log
+/latex/*.aux
+/latex/*.out
+/latex/*.toc
+/latex/*.synctex.gz
+/latex/*.fdb_latexmk
+/latex/*.fls

@@ -1,0 +1,369 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\definecolor{baseline}{HTML}{24557A}
+\definecolor{sketch}{HTML}{A3442B}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+\emergencystretch=2em
+
+% The vector plot below places 25-origin bin means from the archived
+% pilot_results/trajectory.csv on a 360 by 180 point plotting area.
+
+\title{Volatility-Estimation Lag and Calibration Memory:\\
+A Sequential Prediction-Interval Feasibility Study}
+\author{Junguang Jia}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Abstract}
+Sequential prediction intervals can respond slowly to a scale change for two
+reasons: the current scale forecast may lag, and earlier scale errors remain in
+the calibration scores after that forecast recovers. This report separates
+those mechanisms in a finite-window model and examines one controlled Gaussian
+scale-jump pilot. The archived pilot contains 200 independent paths. For a
+250-score window, the causal EWMA-normalized rolling interval attained 95.24\%
+coverage overall but 83.42\% over the first 25 forecasts after the upward
+scale step; the raw rolling interval attained 94.28\% and 53.72\%,
+respectively. A separate deterministic contamination calculation shows how
+inflated historical scores can persist after the current scale becomes exact.
+These are development results from one synthetic design. The work does not
+establish a new method, a general conditional-coverage guarantee, or a
+novelty claim.
+
+\section{Introduction}
+This study concerns one-step intervals for a scalar next response $Y_t$ under
+time-varying conditional scale. The question is whether scale normalization
+improves the immediate response to a volatility change and how long historical
+scale-estimation errors can affect a finite calibration window. The distinction
+matters because an interval can have near-nominal coverage averaged over a long
+evaluation period while missing many responses immediately after a shift.
+
+Adaptive conformal inference (ACI) already studies online coverage under
+distribution shift and uses GARCH-normalized scores in a realized-volatility
+example~\cite{gibbs2021}. Sequential predictive conformal inference (SPCI)
+predicts future residual quantiles using temporal dependence and gives an
+assumption-dependent asymptotic conditional-coverage analysis~\cite{xu2023}.
+Strongly adaptive online conformal prediction and conformal PID control provide
+further adaptive calibration approaches~\cite{bhatnagar2023,angelopoulos2023}.
+The present pilot implements none of those comparators. Its purpose is to
+isolate a candidate mechanism and specify the evidence needed for a later
+comparison, rather than to claim priority or superiority.
+
+\section{Sequential interval protocol}
+Let $\mathcal F_{t-1}$ contain the observations available before $Y_t$ is
+revealed. At origin $t$, a deployable method uses only $\mathcal F_{t-1}$ to
+issue a location forecast $\widehat\mu_t$, a positive scale forecast
+$\widehat\sigma_t$, and an interval. After $Y_t$ is observed, it stores the
+\emph{vintage} score
+\[
+ R_t=\frac{|Y_t-\widehat\mu_t|}{\widehat\sigma_t}.
+\]
+The forecasts in an old score remain those issued at its original origin;
+they are not recomputed using a later model fit. In the pilot the mean is
+known to be zero. For a rolling window of $W$ previous scores, let
+\[
+ k=\left\lceil(W+1)(1-\alpha)\right\rceil,\qquad
+ q_t=R_{(k);\,t-W:t-1},\qquad
+ C_t=[\widehat\mu_t-\widehat\sigma_t q_t,
+      \widehat\mu_t+\widehat\sigma_t q_t].
+\]
+Here $R_{(k);\,t-W:t-1}$ is the $k$th order statistic of the saved scores.
+If $k>W$, the specified threshold is infinite. The current response never
+enters its own calibration window. Forecast cutoffs, unavailable scores, and
+failed fits must remain visible in a later full evaluation; the corrected
+rank alone gives no general coverage guarantee under temporal dependence.
+
+\section{Scale error and calibration memory}
+Suppose $Y_t=\mu_t+\sigma_t Z_t$ with exact location forecasts. If every
+forecast scale in a window, including the current one, equals the true scale
+times the same constant $c>0$, then $R_i=|Z_i|/c$. The score quantile is
+$q_t=q_t^{\rm oracle}/c$, and
+$\widehat\sigma_tq_t=\sigma_tq_t^{\rm oracle}$.
+Thus a stable multiplicative scale bias cancels from this rolling interval.
+Scale forecast error by itself does not determine interval error; the
+\emph{change} in scale error across score vintages is relevant.
+
+Write $\eta_i=\log(\widehat\sigma_i/\sigma_i)$ and let $G$ be the CDF of
+$|Z_i|$. Assume the innovations are identically distributed and continuous,
+each $Z_i$ is independent of $\mathcal F_{i-1}$, and each $\eta_i$ is fixed
+before $Y_i$ is revealed. Define
+$H_i(x)=G(e^{\eta_i}x)$, its window average $\overline H_t(x)$, and the
+empirical score CDF $\widehat H_t(x)$. When the $W$ scores are distinct and
+$k\leq W$, the conditional coverage $c_t=H_t(q_t)$ obeys the pathwise
+decomposition
+\[
+ |c_t-(1-\alpha)|\leq
+ \underbrace{\sup_x|\widehat H_t(x)-\overline H_t(x)|}_{A_t}
+ +\underbrace{\sup_x|\overline H_t(x)-H_t(x)|}_{B_t}
+ +\left|\frac{k}{W}-(1-\alpha)\right|.
+\]
+If $G$ has density $g$ and $L=\sup_{u\geq0}ug(u)<\infty$, then
+$B_t\leq L W^{-1}\sum_{i=t-W}^{t-1}|\eta_i-\eta_t|$.
+This separates empirical fluctuation, relative scale-error drift, and rank
+rounding. It is a diagnostic decomposition, not an automatic finite-sample
+conditional-coverage theorem; the empirical term requires its own analysis.
+
+For an exact, narrower calculation, assume the current scale has recovered.
+Among $W$ independent historical scores, $W-m$ have distribution $U=|Z|$ and
+$m$ have distribution $cU$. Membership in the two groups and $c$ are fixed
+before the scores are drawn. Let $q$ be their $k$th order statistic and let
+$U_0$ be an independent new draw. Conditioning on $U_0=u$ gives
+\begin{equation}
+ \Pr(U_0\leq q)=\int_0^\infty
+ \Pr\{A_u+B_u\leq k-1\}\,dG(u),\qquad
+ \begin{cases}
+ A_u\sim\operatorname{Bin}(W-m,G(u)),\\
+ B_u\sim\operatorname{Bin}(m,G(u/c)),
+ \end{cases}
+ \label{eq:contamination}
+\end{equation}
+with independent binomial counts for each fixed $u$. Indeed, $U_0\leq q$
+exactly when at most $k-1$ historical scores lie below $U_0$, apart from
+probability-zero ties. For $m=0$ or $c=1$, the clean repeated-sample coverage
+is $k/(W+1)$. Coupling the same $U$ draws shows that $c>1$ cannot lower this
+repeated-sample coverage, while $c<1$ cannot raise it. This identity
+does not transfer unchanged to adaptive EWMA or fitted GARCH scores, whose
+errors depend on past observations. Its proof and relation to prior work still
+require independent scientific review.
+
+\section{Exploratory experimental design}
+The archived pilot draws 200 independent paths of length 2,600 with
+$Z_t\sim N(0,1)$, known mean zero, and true scale $\sigma_t=1$ until
+zero-based origin 1200, $3$ for origins 1200--1799, then $1$ again. Evaluation
+covers origins 1000--2599 at nominal coverage $1-\alpha=0.95$. The causal
+EWMA forecast starts at variance $v_0=1$ and updates only after reveal:
+\[
+ \widehat\sigma_t=\sqrt{v_t},\qquad
+ v_{t+1}=0.94v_t+0.06Y_t^2.
+\]
+The principal comparison uses raw rolling absolute errors, EWMA-normalized
+rolling vintage scores, and an oracle-scale rolling diagnostic, all with
+$W=250$. A full Gaussian oracle uses the true current scale and the normal
+0.975 quantile. All methods share the same innovations within each path;
+oracle rows have privileged information and are not deployable competitors.
+
+Coverage is averaged first across forecast origins within each path and then
+across paths. Its Monte Carlo standard error (MCSE) is the sample standard
+deviation of the 200 path-level means divided by $\sqrt{200}$. Mean width is
+reported relative to the full Gaussian oracle width at the same origin.
+Analytic conditional coverage in this Gaussian simulation is also averaged
+over paths for the event-time figure. These uncertainty summaries condition
+on this single fixed data-generating design, not a population of
+volatility processes. The archive also contains $W=50$ variants; their clean
+rank benchmark is $49/51=0.9608$, versus $239/251=0.9522$ for $W=250$,
+so their coverage difference cannot be interpreted as pure adaptivity.
+
+\section{Results}
+Table~\ref{tab:pilot} shows that average coverage can mask a severe immediate
+post-shift deficit. For raw rolling calibration, the first 25 upward-shift
+forecasts cover 53.72\% of outcomes; EWMA normalization raises this to
+83.42\% in this design but still falls well below 95\%. The oracle-scale
+diagnostic is close to its clean finite-rank level. Following the downward
+step, raw rolling coverage over the first 25 forecasts is 100\%, with mean
+width 3.03 times the full-oracle width; the EWMA-normalized counterpart has
+99.98\% coverage and width ratio 2.38. Neither observation establishes a
+method ranking against strong adaptive baselines.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Archived 200-path pilot at $W=250$. Coverage and MCSE are percentage
+points; width ratio is the mean interval width divided by full Gaussian oracle
+width. Both oracles use the true current scale.}
+\label{tab:pilot}
+\begin{tabular}{lrrrrr}
+\toprule
+Method & Overall (\%) & MCSE & Up 0--24 (\%) & MCSE & Width ratio \\
+\midrule
+Raw rolling & 94.283 & 0.027 & 53.72 & 0.570 & 1.195 \\
+EWMA-normalized rolling & 95.242 & 0.015 & 83.42 & 0.355 & 1.079 \\
+Oracle-scale rolling & 95.225 & 0.017 & 95.40 & 0.282 & 1.017 \\
+Full Gaussian oracle & 94.962 & 0.041 & 94.90 & 0.301 & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:upshift} shows a second view of the same upward shift using
+conditional coverage, which averages over the future Gaussian outcome while
+retaining variation in past histories. The plotted values are descriptive
+25-origin bin means from the archived trajectory. They do not supply
+bin-level uncertainty intervals or a new confirmatory test.
+
+\begin{figure}[H]
+\centering
+\setlength{\unitlength}{1pt}
+\begin{picture}(440,250)
+{\color{gray!18}
+\multiput(40,30)(0,36){6}{\line(1,0){360}}
+\multiput(40,30)(72,0){6}{\line(0,1){180}}}
+\put(40,30){\line(1,0){360}}
+\put(40,30){\line(0,1){190}}
+\put(40,12){\makebox(0,0){\footnotesize 0}}
+\put(112,12){\makebox(0,0){\footnotesize 50}}
+\put(184,12){\makebox(0,0){\footnotesize 100}}
+\put(256,12){\makebox(0,0){\footnotesize 150}}
+\put(328,12){\makebox(0,0){\footnotesize 200}}
+\put(400,12){\makebox(0,0){\footnotesize 250}}
+\put(32,30){\makebox(0,0)[r]{\footnotesize 0.5}}
+\put(32,66){\makebox(0,0)[r]{\footnotesize 0.6}}
+\put(32,102){\makebox(0,0)[r]{\footnotesize 0.7}}
+\put(32,138){\makebox(0,0)[r]{\footnotesize 0.8}}
+\put(32,174){\makebox(0,0)[r]{\footnotesize 0.9}}
+\put(32,210){\makebox(0,0)[r]{\footnotesize 1.0}}
+\put(40,233){\makebox(0,0)[l]{\small Mean conditional coverage}}
+\put(220,0){\makebox(0,0){\small Forecast origins after upward scale step}}
+{\color{baseline}\linethickness{0.8pt}
+\qbezier(58,49)(76,76.5)(94,104)
+\qbezier(94,104)(112,123)(130,142)
+\qbezier(130,142)(148,151.5)(166,161)
+\qbezier(166,161)(184,166.5)(202,172)
+\qbezier(202,172)(220,175.5)(238,179)
+\qbezier(238,179)(256,181.5)(274,184)
+\qbezier(274,184)(292,185.5)(310,187)
+\qbezier(310,187)(328,188.5)(346,190)
+\qbezier(346,190)(364,191)(382,192)
+\put(58,49){\circle*{3}}\put(94,104){\circle*{3}}
+\put(130,142){\circle*{3}}\put(166,161){\circle*{3}}
+\put(202,172){\circle*{3}}\put(238,179){\circle*{3}}
+\put(274,184){\circle*{3}}\put(310,187){\circle*{3}}
+\put(346,190){\circle*{3}}\put(382,192){\circle*{3}}
+\put(265,108){\line(1,0){17}}\put(273,108){\circle*{3}}}
+\put(287,108){\makebox(0,0)[l]{\footnotesize Raw rolling}}
+{\color{sketch}\linethickness{0.8pt}
+\qbezier(58,153)(76,174)(94,195)
+\qbezier(94,195)(112,196)(130,197)
+\qbezier(130,197)(148,197.5)(166,198)
+\qbezier(166,198)(184,198)(202,198)
+\qbezier(202,198)(220,198)(238,198)
+\qbezier(238,198)(256,198)(274,198)
+\qbezier(274,198)(292,198)(310,198)
+\qbezier(310,198)(328,197.5)(346,197)
+\qbezier(346,197)(364,197)(382,197)
+\put(58,153){\makebox(0,0){\scriptsize$\diamond$}}
+\put(94,195){\makebox(0,0){\scriptsize$\diamond$}}
+\put(130,197){\makebox(0,0){\scriptsize$\diamond$}}
+\put(166,198){\makebox(0,0){\scriptsize$\diamond$}}
+\put(202,198){\makebox(0,0){\scriptsize$\diamond$}}
+\put(238,198){\makebox(0,0){\scriptsize$\diamond$}}
+\put(274,198){\makebox(0,0){\scriptsize$\diamond$}}
+\put(310,198){\makebox(0,0){\scriptsize$\diamond$}}
+\put(346,197){\makebox(0,0){\scriptsize$\diamond$}}
+\put(382,197){\makebox(0,0){\scriptsize$\diamond$}}
+\put(265,91){\line(1,0){17}}\put(273,91){\makebox(0,0){\scriptsize$\diamond$}}}
+\put(287,91){\makebox(0,0)[l]{\footnotesize EWMA-normalized}}
+{\color{gray!70!black}
+\multiput(58,193)(9,0){36}{\line(1,0){5}}
+\multiput(265,74)(8,0){2}{\line(1,0){5}}}
+\put(287,74){\makebox(0,0)[l]{\footnotesize Oracle-scale rolling}}
+\end{picture}
+\caption{Mean conditional coverage in consecutive 25-origin bins after the
+upward scale step, averaged over the 200 archived paths. Points are placed at
+bin midpoints. Lines guide the eye; no bin-level MCSE is shown.}
+\label{fig:upshift}
+\end{figure}
+
+Table~\ref{tab:contamination} evaluates the independent deterministic-score
+model in Eq.~\eqref{eq:contamination}, not the EWMA pilot. With $W=250$ and
+$k=239$, 25 inflated historical scores at $c=3$ raise repeated-sample
+coverage from the clean 95.219\% to 98.955\% despite an exact current scale.
+Replacing $c$ by $1/3$ lowers it to 94.690\%. The numerical quadrature and
+40,000 independent Monte Carlo checks agree within the recorded Monte Carlo
+errors. These calculations illustrate a possible post-recovery memory effect;
+they do not measure how often a fitted scale model creates that pattern.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Deterministic contamination model at $W=250$, $k=239$. Quadrature
+and Monte Carlo (MC) coverage are percentages; MCSE is in percentage points.}
+\label{tab:contamination}
+\begin{tabular}{rrrrr}
+\toprule
+Contaminated $m$ & Multiplier $c$ & Quadrature (\%) & MC (\%) & MCSE \\
+\midrule
+0 & 1 & 95.2191 & 95.2182 & 0.0067 \\
+25 & 3 & 98.9553 & 98.9564 & 0.0037 \\
+25 & $1/3$ & 94.6903 & 94.6942 & 0.0074 \\
+50 & 3 & 99.9192 & 99.9187 & 0.0007 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Limitations and next study}
+The pilot has one Gaussian scale-jump profile, one EWMA decay, a known mean,
+and development seeds only. It includes neither a fitted GARCH scale forecast
+nor ACI, SPCI, strongly adaptive online conformal prediction, or conformal
+PID. It uses no dated real series. Oracle methods know the true current scale
+at an unannounced change, so their performance is a diagnostic boundary, not
+an achievable forecast at that origin. Overall coverage, interval width, and
+event-time behavior must be evaluated together; no result here establishes
+general conditional coverage or practical superiority.
+
+The next study should first test Eq.~\eqref{eq:contamination} over a
+predeclared grid of contamination counts and multipliers, including both
+directions and clean controls. It should then add causally fitted scale
+forecasts and faithful adaptive comparators on common planned evaluation
+origins, retaining failed fits and infinite intervals. Hyperparameters,
+scenarios, primary contrasts, and confirmation seeds should be fixed before
+the confirmation runs. Mathematical assumptions and overlap with prior work
+need independent review before a new contribution is claimed.
+
+\section{Reproducibility}
+The repository includes the Python pilot, numerical identity checks,
+forecast-before-reveal tests, a locked dependency file, and the archived
+synthetic outputs. The numerical source for Table~\ref{tab:pilot} is
+\path{reference/synthetic_baseline_v1/pilot_results/summary.csv};
+Figure~\ref{fig:upshift} aggregates
+\path{reference/synthetic_baseline_v1/pilot_results/trajectory.csv}; and
+Table~\ref{tab:contamination} uses
+\path{reference/synthetic_baseline_v1/theory_results/coverage_identity.csv}.
+The six numerical archive files have recorded SHA-256 hashes in
+\path{reference/synthetic_baseline_v1/SHA256SUMS.txt}. This standalone source
+embeds the plotted values and requires no external data file to compile.
+
+The archived 200-path pilot records Python 3.13.5, NumPy 2.3.5, SciPy 1.17.0,
+and seed 20260928. The current locked workspace uses Python 3.12.9. Its 56
+Python tests passed; a fresh two-path development smoke run matched all 560
+keyed per-replication metrics in the archived seed prefix at absolute and
+relative tolerance $10^{-12}$. A full 200-path reproduction in the current
+workspace has not been completed. The two-path agreement checks implementation
+consistency for that prefix, not the research claims in this report.
+
+\begin{thebibliography}{9}
+\bibitem{gibbs2021}
+I. Gibbs and E. J. Cand\`es.
+Adaptive conformal inference under distribution shift.
+\emph{Advances in Neural Information Processing Systems}, 34, 2021.
+\href{https://arxiv.org/abs/2106.00170}{arXiv:2106.00170}.
+
+\bibitem{xu2023}
+C. Xu and Y. Xie.
+Sequential predictive conformal inference for time series.
+\emph{Proceedings of the 40th International Conference on Machine Learning},
+PMLR 202:38707--38727, 2023.
+\href{https://proceedings.mlr.press/v202/xu23r.html}{PMLR: xu23r}.
+
+\bibitem{bhatnagar2023}
+A. Bhatnagar, H. Wang, C. Xiong, and Y. Bai.
+Improved online conformal prediction via strongly adaptive online learning.
+\emph{Proceedings of the 40th International Conference on Machine Learning},
+PMLR 202:2337--2363, 2023.
+\href{https://proceedings.mlr.press/v202/bhatnagar23a.html}{PMLR: bhatnagar23a}.
+
+\bibitem{angelopoulos2023}
+A. N. Angelopoulos, E. J. Cand\`es, and R. J. Tibshirani.
+Conformal PID control for time series prediction.
+\emph{Advances in Neural Information Processing Systems}, 36, 2023.
+\href{https://arxiv.org/abs/2307.16895}{arXiv:2307.16895}.
+\end{thebibliography}
+\end{document}
